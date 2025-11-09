@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>動物タイプ精密診断（猫×犬）v2</title>
+<style>
+  :root{
+    --ink:#111;
+    --muted:#6b7280;
+    --border:#e5e7eb;
+    --bg:#f8fafc;
+    --accent:#4338ca;
+  }
+  html,body{margin:0;padding:0;background:#fff;font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans JP", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; line-height:1.65; color:var(--ink)}
+  header{padding:22px 20px;background:var(--ink);color:#fff}
+  header h1{margin:0;font-size:20px}
+  main{max-width:980px;margin:0 auto;padding:20px}
+  .card{border:1px solid var(--border);border-radius:14px;padding:18px;margin:14px 0;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+  h2{margin:4px 0 8px 0;font-size:18px}
+  .hint{font-size:12px;color:var(--muted)}
+  .grid{display:grid;gap:14px}
+  @media(min-width:900px){.grid{grid-template-columns:1fr 1fr}}
+  .q{display:grid;gap:10px;align-items:center}
+  @media(min-width:780px){.q{grid-template-columns:1fr auto}}
+  .q p{margin:0}
+  .bubbles{display:flex;align-items:center;gap:16px;user-select:none}
+  .bubbles .edge{font-size:12px;color:var(--muted);min-width:64px}
+  .bubble-group{display:flex;gap:14px;align-items:center}
+  .bubble{
+    --size:28px;
+    width:var(--size);height:var(--size);
+    border-radius:999px;border:2px solid var(--border);
+    display:inline-flex;align-items:center;justify-content:center;
+    cursor:pointer; position:relative; transition:.15s transform ease;
+    outline: none;
+  }
+  .bubble:hover{transform:scale(1.08)}
+  .bubble input{appearance:none;position:absolute;inset:0;width:100%;height:100%;margin:0;cursor:pointer}
+  .bubble:has(input:checked){
+    border-color:transparent;
+    background: radial-gradient(100% 100% at 50% 50%, var(--accent), #111);
+    box-shadow: 0 4px 12px rgba(17,17,17,.25);
+  }
+  .bubble .dot{
+    width:8px;height:8px;border-radius:999px;background:var(--border);
+  }
+  .bubble:has(input:checked) .dot{background:#fff}
+  .row{border-top:1px dashed var(--border);padding-top:10px;margin-top:10px}
+  .actions{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0}
+  button{border:0;border-radius:10px;padding:12px 16px;cursor:pointer;background:#111;color:#fff;font-weight:600}
+  button.secondary{background:#e5e7eb;color:#111}
+  .result{display:none}
+  .bar{height:12px;border-radius:6px;background:#e5e7eb;overflow:hidden}
+  .bar>span{display:block;height:100%;background:#111;width:0%}
+  .pill{display:inline-block;border-radius:999px;padding:4px 10px;background:#111;color:#fff;font-size:12px;margin-left:8px;}
+  .typeCard{border:1px solid var(--border);border-radius:12px;padding:12px}
+  .small{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header><h1>動物タイプ精密診断（猫×犬 / サブタイプ付き）v2</h1></header>
+<main>
+  <div class="card">
+    <p>各設問に直感でお答えください（<strong>5段階</strong>）。左が「そう思う」、右が「そう思わない」。真ん中はどちらでもない。</p>
+  </div>
+
+  <form id="quiz">
+    <div class="card">
+      <h2>共通ベース（10問）</h2>
+      <div id="base"></div>
+      <div class="hint">※ 猫＝自律・観察、犬＝協調・行動の傾向を推定します。</div>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <h2>猫型 分岐（5問）</h2>
+        <div id="cat"></div>
+        <div class="hint">毛色タイプ（白／黒／茶トラ／白黒／アメショー）を推定します。</div>
+      </div>
+      <div class="card">
+        <h2>犬型 分岐（5問）</h2>
+        <div id="dog"></div>
+        <div class="hint">犬種タイプ（柴／トイプー／チワワ／ゴールデン／ビーグル）を推定します。</div>
+      </div>
+    </div>
+    <div class="actions">
+      <button type="button" id="calc">診断する</button>
+      <button type="reset" class="secondary" id="resetBtn">リセット</button>
+    </div>
+  </form>
+
+  <div class="card result" id="result">
+    <h2>診断結果</h2>
+    <div class="grid">
+      <div>
+        <h3>猫度</h3>
+        <div class="bar"><span id="catBar"></span></div>
+        <div class="small" id="catPct"></div>
+      </div>
+      <div>
+        <h3>犬度</h3>
+        <div class="bar"><span id="dogBar"></span></div>
+        <div class="small" id="dogPct"></div>
+      </div>
+    </div>
+
+    <div class="grid" style="margin-top:16px">
+      <div class="typeCard">
+        <h3>あなたの猫タイプ <span class="pill" id="catTypePill">-</span></h3>
+        <div id="catTypeDesc" class="small"></div>
+      </div>
+      <div class="typeCard">
+        <h3>あなたの犬タイプ <span class="pill" id="dogTypePill">-</span></h3>
+        <div id="dogTypeDesc" class="small"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+const baseQs = [
+  "周囲が盛り上がっていても、自分のペースを崩さずいられる。",
+  "困っている人を見ると、放っておけない。",
+  "集団よりも少人数、または一人で動くほうが落ち着く。",
+  "新しい環境でも、すぐに人と打ち解ける方だ。",
+  "感情よりも、まず状況を分析して判断する。",
+  "仲間との協力よりも、自分で試行錯誤するほうが好き。",
+  "相手の気持ちを察して先に行動することが多い。",
+  "気になることがあると、深く掘り下げずにはいられない。",
+  "誰かに頼られるより、自分が支える立場でいたい。",
+  "人との関係は、ほどよい距離がある方が安心する。"
+];
+const baseWeights = [ +1, -1, +1, -1, +1, +1, -1, +1, -1, +1 ];
+
+const catQs = [
+  "自分の世界観や美意識には強いこだわりがある。",
+  "人との関係は“浅く広く”より“深く狭く”がいい。",
+  "心が動くのは、静かな瞬間や小さな変化を見つけたときだ。",
+  "何かを始めるとき、まず頭の中で構成を考えてから動く。",
+  "感情を言葉にするより、作品や行動で示すことが多い。"
+];
+
+const dogQs = [
+  "仲間やチームで動くと、自然とまとめ役になることが多い。",
+  "相手の反応に敏感で、空気を読むのが得意だ。",
+  "目標が決まると、最後までやり遂げないと気がすまない。",
+  "周囲の調和を保つためなら、自分を少し抑えることもある。",
+  "誰かを喜ばせると、自分のことのようにうれしい。"
+];
+
+function renderBubbles(containerId, list, prefix){
+  const el = document.getElementById(containerId);
+  el.innerHTML = "";
+  list.forEach((text, i)=>{
+    const idx = i+1;
+    const name = prefix + idx;
+    const row = document.createElement("div");
+    row.className = "q row";
+    row.innerHTML = `
+      <p><strong>${idx}.</strong> ${text}</p>
+      <div class="bubbles">
+        <span class="edge">そう思う</span>
+        <div class="bubble-group" role="radiogroup" aria-label="${text}">
+          ${[1,2,3,4,5].map(v=>`
+            <label class="bubble" title="${v}">
+              <input type="radio" name="${name}" value="${v}" required>
+              <span class="dot" aria-hidden="true"></span>
+            </label>
+          `).join("")}
+        </div>
+        <span class="edge">そう思わない</span>
+      </div>
+    `;
+    el.appendChild(row);
+  });
+}
+renderBubbles("base", baseQs, "b");
+renderBubbles("cat", catQs, "c");
+renderBubbles("dog", dogQs, "d");
+
+function val(name){
+  const node = document.querySelector(`input[name="${name}"]:checked`);
+  return node ? parseInt(node.value,10) : null;
+}
+function centered(x){ return x - 3; }
+
+function compute(){
+  let catRaw = 0;
+  for(let i=0;i<baseQs.length;i++){
+    const v = val(`b${i+1}`);
+    if(v==null) return null;
+    catRaw += centered(v) * baseWeights[i];
+  }
+  const catPct = Math.round((catRaw + 20) / 40 * 100);
+  const dogPct = 100 - catPct;
+
+  const c = [];
+  for(let i=0;i<catQs.length;i++){
+    const v = val(`c${i+1}`);
+    if(v==null) return null;
+    c.push(v);
+  }
+  const b = [];
+  [2,3,4,5,7,8,10].forEach(j=> b.push(val(`b${j}`)));
+
+  const trait = {
+    sociability: ( (b[2-1]||3) + (b[1-1]||3) + (b[5-1]||3) ) / 3,
+    delicate: ( (b[7-1]||3) + c[2] ) / 2,
+    introspect: ( c[0] + c[4] + (b[4-1]||3) ) / 3,
+    balance: ( c[3] + (b[4-1]||3) + (val("b1")||3) ) / 3,
+    flexible: ( (b[6-1]||3) + (b[2-1]||3) + (6 - c[1]) ) / 3
+  };
+  const catMap = [
+    {key:"白猫", score: (trait.delicate*1.2 + trait.balance*0.6)},
+    {key:"黒猫", score: (trait.introspect*1.2 + trait.delicate*0.4)},
+    {key:"茶トラ", score: (trait.sociability*1.2 + trait.flexible*0.6)},
+    {key:"白黒", score: (trait.balance*1.3 + trait.introspect*0.3)},
+    {key:"アメショー", score: (trait.flexible*1.2 + trait.sociability*0.5)}
+  ];
+  catMap.sort((a,b)=>b.score-a.score);
+  const catType = catMap[0].key;
+
+  const d = [];
+  for(let i=0;i<dogQs.length;i++){
+    const v = val(`d${i+1}`);
+    if(v==null) return null;
+    d.push(v);
+  }
+  const dtrait = {
+    independent: ( (val("b1")||3) + (val("b6")||3) + d[2] ) / 3,
+    cooperative: ( d[1] + d[3] ) / 2,
+    sensitive: ( (val("b10")||3) + d[1] ) / 2,
+    warm: ( d[4] + (val("b2")||3) + d[1] ) / 3,
+    explorer: ( (val("b8")||3) + (6 - (val("b5")||3)) + (6 - d[3]) ) / 3
+  };
+  const dogMap = [
+    {key:"柴犬", score: dtrait.independent*1.15},
+    {key:"トイプードル", score: dtrait.cooperative*1.1},
+    {key:"チワワ", score: dtrait.sensitive*1.1},
+    {key:"ゴールデンレトリバー", score: dtrait.warm*1.1},
+    {key:"ビーグル", score: dtrait.explorer*1.05}
+  ];
+  dogMap.sort((a,b)=>b.score-a.score);
+  const dogType = dogMap[0].key;
+
+  return {catPct, dogPct, catType, dogType};
+}
+
+const descCat = {
+  "白猫":"繊細・誠実・慎重。静かな観察と丁寧な関係づくり。信頼が育つと一気に深くなる。",
+  "黒猫":"観察・内省・美意識。言葉少なめでも核心を射抜く。余白と沈黙が味方。",
+  "茶トラ":"社交・好奇心・陽だまり気質。場を明るくしつつ、自由に動く。",
+  "白黒":"理性・均衡・編集気質。全体を見て最適化、場の温度も整える。",
+  "アメショー":"柔軟・機敏・探究。興味のスイッチで一気に動き、切り替えが速い。"
+};
+const descDog = {
+  "柴犬":"独立・誠実・職人気質。静かな忠義。干渉は苦手だが約束は守る。",
+  "トイプードル":"協調・柔軟・社交。場に合わせるのが上手で、気遣いの天才。",
+  "チワワ":"繊細・慎重・一途。安心できる相手には全力で懐く。",
+  "ゴールデンレトリバー":"包容・温厚・奉仕。誰かを喜ばせることで輝くタイプ。",
+  "ビーグル":"冒険・自由・好奇。面白さの嗅覚が鋭く、新しい道を切り拓く。"
+};
+
+document.getElementById("calc").addEventListener("click", ()=>{
+  const res = compute();
+  if(!res){ alert("未回答の設問があります。"); return; }
+  const {catPct, dogPct, catType, dogType} = res;
+  document.getElementById("catBar").style.width = catPct + "%";
+  document.getElementById("dogBar").style.width = dogPct + "%";
+  document.getElementById("catPct").textContent = catPct + "%";
+  document.getElementById("dogPct").textContent = dogPct + "%";
+  document.getElementById("catTypePill").textContent = catType;
+  document.getElementById("dogTypePill").textContent = dogType;
+  document.getElementById("catTypeDesc").textContent = descCat[catType];
+  document.getElementById("dogTypeDesc").textContent = descDog[dogType];
+  document.getElementById("result").style.display = "block";
+  document.getElementById("result").scrollIntoView({behavior:"smooth"});
+});
+document.getElementById("resetBtn").addEventListener("click", ()=>{
+  document.getElementById("result").style.display = "none";
+});
+</script>
+</body>
+</html>
